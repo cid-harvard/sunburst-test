@@ -6,12 +6,12 @@ const smallDatapointIdSuffix = 'smallDatapointIdSuffix';
 
 function SunburstChart({rawData, name, maxLevels, excludeRoot, bucket, showCurrentCountry}) {
 
-
   const chart = Sunburst();
 
   const data = {
     name,
-    children: []
+    percent: 100,
+    children: [],
   }
 
   // transform data to match structure
@@ -21,7 +21,7 @@ function SunburstChart({rawData, name, maxLevels, excludeRoot, bucket, showCurre
     const color = value < 0.15 ? lighten(0.3, datum.color) : datum.color;
     if (showCurrentCountry && datum.topLevelParentId === 'USA') {
       if (bucket && value < 0.15) {
-        topLevelParentId = 'Other cities in the USA with <0.15% representation';
+        topLevelParentId = 'Cities in USA with < 0.15%';
       } else {
         topLevelParentId = title;
       }
@@ -31,44 +31,65 @@ function SunburstChart({rawData, name, maxLevels, excludeRoot, bucket, showCurre
     const existingNodeIndex = data.children.findIndex(({id}) => id === topLevelParentId);
     if (existingNodeIndex !== -1) {
       const node = {
-        id, name: title, value, color,
+        id, name: title, value, color, percent: value,
       };
       if (bucket && value < 0.15 && !(showCurrentCountry && datum.topLevelParentId === 'USA')) {
         const existingSmallDataNodeIndex =
           data.children[existingNodeIndex].children.findIndex(({id}) => id === topLevelParentId + smallDatapointIdSuffix);
         if (existingSmallDataNodeIndex !== -1) {
-          data.children[existingNodeIndex].children[existingSmallDataNodeIndex].value += value;
+          data.children[existingNodeIndex].children[existingSmallDataNodeIndex].percent += value;
           data.children[existingNodeIndex].children[existingSmallDataNodeIndex].children.push({...node});
         } else {
           data.children[existingNodeIndex].children.push({
-            name: name + ' in ' + topLevelParentId + ' with <0.15% representation',
+            name: 'Cities in ' + topLevelParentId + ' with <0.15%',
             id: topLevelParentId + smallDatapointIdSuffix,
             color,
+            percent: value,
             children: [{...node}]
           });
         }
       } else {
         data.children[existingNodeIndex].children.push(node);
       }
+      data.children[existingNodeIndex].percent += value;
     } else {
-      const node = bucket && value < 0.15 && !(showCurrentCountry && datum.topLevelParentId === 'USA') ? {
-        name: topLevelParentId,
-        id: topLevelParentId,
-        color,
-        children: [{
-          id: topLevelParentId + smallDatapointIdSuffix,
-          name: name + ' in ' + topLevelParentId + ' with <0.15% representation',
-          value,
+      let node;
+      if (!(showCurrentCountry && datum.topLevelParentId === 'USA')) {
+        node = bucket && value < 0.15 ? {
+          name: topLevelParentId,
+          id: topLevelParentId,
           color,
-          children: [{id, name: title, value, color}]
-        }]
-      } : {
-        name: topLevelParentId,
-        id: topLevelParentId,
-        color,
-        children: [{
-          id, name: title, value, color,
-        }]
+          percent: value,
+          children: [{
+            id: topLevelParentId + smallDatapointIdSuffix,
+            name: name + ' in ' + topLevelParentId + ' with <0.15% representation',
+            value,
+            percent: value,
+            color,
+            children: [{id, name: title, value, percent: value, color}]
+          }]
+        } : {
+          name: topLevelParentId,
+          id: topLevelParentId,
+          color,
+          percent: value,
+          children: [{
+            id, name: title, value, color, percent: value,
+          }]
+        }
+      } else {
+        node = bucket && value < 0.15 ? {
+          name: topLevelParentId,
+          id: topLevelParentId,
+          color,
+          percent: value,
+          children: [{
+            id: topLevelParentId + smallDatapointIdSuffix,
+            name: name + ' in ' + topLevelParentId + ' with <0.15% representation',
+            percent: value,
+            color,
+          }]
+        } : {id, name: title, value, color, percent: value}
       }
       data.children.push(node)
     }
@@ -88,6 +109,18 @@ function SunburstChart({rawData, name, maxLevels, excludeRoot, bucket, showCurre
         .minSliceAngle(0)
         .maxLevels(maxLevels)
         .centerRadius(0.3)
+        .onClick(n => {
+          if (n && n.children && n.children.length) {
+            chart.focusOnNode(n);
+          }
+        })
+        .tooltipTitle(n => {
+          if (n.percent) {
+            return n.name + ': ' + parseFloat(n.percent.toFixed(2)) + '%';
+          } else {
+            return n.name;
+          }
+        })
 
       if (showCurrentCountry) {
         chart.sort((a, b) => {
