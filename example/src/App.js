@@ -1,10 +1,29 @@
-import React from 'react'
+import React from 'react';
+import './App.css';
+import {
+  HashRouter as Router,
+  Route,
+  Switch,
+} from 'react-router-dom';
+import CitiesAllNodes from './pages/CitiesAllNodes';
+import CitiesSmallNodeBucket from './pages/CitiesSmallNodeBucket';
+import CitiesAggregateToCountry from './pages/CitiesAggregateToCountry';
+import CitiesAggregateToCountryExceptCurrent from './pages/CitiesAggregateToCountryExceptCurrent';
+import LandingPage from './pages/LandingPage';
 
-import { ExampleComponent } from 'sunburst-test'
-import 'sunburst-test/dist/index.css'
+function App() {
 
-const App = () => {
-  return <ExampleComponent text="Create React Library Example 😄" />
+  return (
+    <Router>
+      <Switch>
+        <Route exact path={'/cities-all-nodes'} component={CitiesAllNodes} />
+        <Route exact path={'/cities-bucket-nodes'} component={CitiesSmallNodeBucket} />
+        <Route exact path={'/cities-aggregate-nodes'} component={CitiesAggregateToCountry} />
+        <Route exact path={'/cities-aggregate-nodes-except-current'} component={CitiesAggregateToCountryExceptCurrent} />
+        <Route component={LandingPage} />
+      </Switch>
+    </Router>
+  );
 }
 
-export default App
+export default App;
